@@ -7,58 +7,111 @@
 
 #include <cstdlib>
 #include <stdio.h>
+#include <queue>
+#include <unistd.h>
+#include <pthread.h>
+#include <iostream>
 
 using namespace std;
-void stuff(const char* input);
-void destuff(const char* input);
-char* prepareString(const char* input);
 
+queue<char> x;
+pthread_mutex_t mtx;
 
-void stuff(const char* input) {
+void* fillQuenue(void*) {
+    long counter = 0;
+    while (1) {
+        if (x.size() > 500) {
+            pthread_yield();
 
+        } else {
+            pthread_mutex_lock(&mtx);
 
-}
+            for (int i = 0; i < 100; i++) {
+                if (counter % 16 == 0) {
+                    x.push(0x00);
+                    printf("%x ", x.back());
 
-void destuff(const char* input) {
+                    counter++;
+                } else {
+                    char character = rand() % 127 + 1;
+                    //char character = 0;
+                    if (character == 0) {
+                        x.push(0x1B);
+                        //printf("%x ", x.back());
 
+                        x.push(character);
+                        //printf("%x ", x.back());
 
-}
+                        x.push(0x30);
+                        //printf("%x ", x.back());
 
-char* prepareString(const char* input){
-    int length = 0;
-    char * buffer;
-    while(input[length] != 0){
-        length++;
+                    } else {
+                        x.push(character);
+                        //printf("%x ", x.back());
+
+                    }
+                    counter++;
+                }
+
+            }
+            //printf("\n");
+
+            pthread_mutex_unlock(&mtx);
+            //sleep(1);
+            pthread_yield();
+        }
     }
-    printf("Streamlength: %i \n", length);
-    buffer = (char*) malloc (length+1);
-    
-    int i = 0;
-    //TODO: add 0x00 + length + postfix decrease malloc
-    while(i < length){
-        buffer[i] = input[i];
-        i++;
-    }
-    return buffer;
+
 }
 
+void* receive(void*) {
 
+    while (1) {
+        char chararr[100];
+        if (x.size() < 20) {
+          //  printf("Que leer \n");
+            pthread_yield();
+        } else {
+            //printf("Que länge %l \n", x.size());
+            cout << x.size() << endl;
+            pthread_mutex_lock(&mtx);
+            for (int i = 0; i < 16; i++) {
+                char c = x.front();
+                x.pop();
+                chararr[i] = c;
+
+                if (c == 0x1b) {
+                    c = x.front();
+                    x.pop();
+                    chararr[i] = c;
+                    x.pop();
+                }
+            }
+            printf("Output ");
+            for (int i = 0; i < 16; i++) {
+                printf("%x ", chararr[i]);
+            }
+            printf(" \n");
+            pthread_mutex_unlock(&mtx);
+
+        }
+
+    }
+}
 
 /*
  * 
  */
 int main(int argc, char** argv) {
-    const char* progName = argv[0];
-    const char* stream = argv[1];
 
-    // handle input parameters
-    if (argc != 2) {
-        printf("Zu wenige Parameter");
-        exit(EXIT_FAILURE);
-    }
-    printf("Prog: %s \nInput: %s", progName, stream);
-    char* output = prepareString(stream);
-    printf("Output: %s", output);
+    pthread_t t1, t2;
+    pthread_mutex_init(&mtx, NULL);
+    pthread_create(&t1, NULL, fillQuenue, NULL);
+    pthread_create(&t2, NULL, receive, NULL);
+
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+
 
     return 0;
 }
