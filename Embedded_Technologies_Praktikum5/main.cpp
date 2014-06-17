@@ -29,7 +29,7 @@ void* fillQuenue(void*) {
             for (int i = 0; i < 100; i++) {
                 if (counter % 16 == 0) {
                     x.push(0x00);
-                    printf("%x ", x.back());
+                    //printf("%x ", x.back());
 
                     counter++;
                 } else {
@@ -68,7 +68,7 @@ void* receive(void*) {
 
     while (1) {
         char chararr[100];
-        if (x.size() < 20) {
+        if (x.size() < 30) {
           //  printf("Que leer \n");
             pthread_yield();
         } else {
